@@ -62,6 +62,11 @@ async function run() {
       const result = await modelsCollection.updateOne(query, update);
       res.send(result);
     })
+    app.post("/models", async (req, res) => {
+      const newModel = req.body;
+      const result = await modelsCollection.insertOne(newModel);
+      res.send(result);
+    })
 
 
 
