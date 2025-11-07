@@ -47,7 +47,7 @@ app.get("/", (req, res) => {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
 
     const modelsDB = client.db("modelsDB");
@@ -105,7 +105,7 @@ async function run() {
 
 
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("✅ Pinged your deployment. Yor are successfully connected to MongoDB!");
   } finally {
     // Optionally close the client when needed
