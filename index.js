@@ -4,10 +4,32 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 3000;
+const admin = require("firebase-admin");
+const serviceAccount = require("./model-hub-firebase-adminsdk.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+const verifyFirebaseToken = async (req, res, next) => {
+  // console.log(req.headers.authorization);
+  if(!req.headers.authorization){
+    return res.status(401).send({ message: "Unauthorized access" });
+  }
+  const token = req.headers.authorization.split(" ")[1];
+  try {
+    const userInfo = await admin.auth().verifyIdToken(token);
+    req.token_email = userInfo.email;
+    next();
+  } catch (error) {
+    return res.status(401).send({ message: "Unauthorized access" });
+  }
+}
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.z1gnsog.mongodb.net/?appName=Cluster0`;
@@ -32,7 +54,20 @@ async function run() {
     const modelsCollection = modelsDB.collection("models");
 
     app.get("/models", async (req, res) => {
-        const cursor = modelsCollection.find();
+      const cursor = modelsCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.get("/myModels", verifyFirebaseToken, async (req, res) => {
+      const email = req.query.email;
+      const query = {};
+      if(email){
+        if(email !== req.token_email){
+          return res.status(403).send({ message: "Forbidden access" });
+        }
+        query.created_by = email;
+      }
+        const cursor = modelsCollection.find(query);
         const result = await cursor.toArray();
         res.send(result);
     })
