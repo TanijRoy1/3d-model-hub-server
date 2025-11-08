@@ -49,6 +49,7 @@ async function run() {
 
     const modelsDB = client.db("modelsDB");
     const modelsCollection = modelsDB.collection("models");
+    const downloadCollection = modelsDB.collection("downloads");
 
     app.get("/models", async (req, res) => {
       const cursor = modelsCollection.find();
@@ -106,6 +107,41 @@ async function run() {
       const result = await modelsCollection.deleteOne(query);
       res.send(result);
     });
+
+    app.get("/search", async (req, res) => {
+      const searchText = req.query.search;
+      const query = {name: {$regex: searchText, $options: "i"}};
+      const cursor = modelsCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.post("/downloads/:id", verifyFirebaseToken, async (req, res) => {
+      const downloadedModel = req.body;
+      const id = req.params.id;
+      const query = {_id : new ObjectId(id)};
+      const update = {
+        $inc : {
+          downloads : 1
+        }
+      }
+      const updatedDownloadCount = await modelsCollection.updateOne(query, update);
+
+      const result = await downloadCollection.insertOne(downloadedModel);
+      res.send(result);
+    })
+    app.get("/myDownloads", verifyFirebaseToken, async (req, res) => {
+      const email = req.query.email;
+      const query = {};
+      if (email) {
+        if (email !== req.token_email) {
+          return res.status(403).send({ message: "Forbidden access" });
+        }
+        query.downloaded_by = email;
+      }
+      const cursor = downloadCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
 
     // await client.db("admin").command({ ping: 1 });
     console.log(
